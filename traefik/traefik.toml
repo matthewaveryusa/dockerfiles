@@ -1,0 +1,47 @@
+debug = false
+
+logLevel = "INFO"
+defaultEntryPoints = ["https","http"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+    [entryPoints.http.redirect]
+    entryPoint = "https"
+  [entryPoints.https]
+  address = ":443"
+  [entryPoints.https.tls]
+  [entryPoints.https.auth.forward]
+  address = "http://check:3000/auth"
+  authResponseHeaders = ["X-Auth-User"]
+
+[retry]
+
+[docker]
+endpoint = "unix:///var/run/docker.sock"
+domain = "averymatt.com"
+watch = true
+exposedByDefault = false
+
+[acme]
+email = "matthewaveryusa@protonmail.com"
+storage = "acme.json"
+entryPoint = "https"
+onHostRule = true
+[acme.dnsChallenge]
+  provider = "cloudflare"
+  delayBeforeCheck = 0
+
+
+[[acme.domains]]
+  main = "*.averymatt.com"
+  sans = ["averymatt.com"]
+[[acme.domains]]
+  main = "*.rcavery.com"
+  sans = ["rcavery.com"]
+[[acme.domains]]
+  main = "*.bluefoxcat.com"
+  sans = ["bluefoxcat.com"]
+[[acme.domains]]
+  main = "*.bluecatfox.com"
+  sans = ["bluecatfox.com"]
