@@ -1,0 +1,32 @@
+version: '3'
+services:
+  traefik:
+    userns_mode: 'host'
+    image: traefik:latest
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${TRAEFIK_DIR:-./data}/traefik.toml:/traefik.toml
+      - ${TRAEFIK_DIR:-./data}/acme.json:/acme.json
+    container_name: traefik
+    environment:
+      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+    networks:
+      - webproxy
+  cfddns:
+    image: joshava/cloudflare-ddns
+    restart: always
+    container_name: cfddns
+    environment:
+      - API=${CLOUDFLARE_API_KEY}
+      - EMAIL=${CLOUDFLARE_EMAIL}
+      - ZONE=${DOMAIN}
+      - HOST=${DOMAIN}
+
+networks:
+  webproxy:
+    external: true

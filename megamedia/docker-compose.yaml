@@ -1,0 +1,160 @@
+version: '3'
+services:
+  delugevpn:
+    image: binhex/arch-delugevpn
+    container_name: delugevpn
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${CONTENT_PATH}/delugevpn:/config
+      - ${CONTENT_PATH}/torrents:/data
+    environment:
+      - TZ=${TZ}
+      - VPN_ENABLED=yes
+      - VPN_USER=${VPN_USER}
+      - VPN_PASS=${VPN_PASS}
+      - VPN_PROV=pia
+      - VPN_REMOTE=ca-toronto.privateinternetaccess.com
+      - VPN_PORT=1198
+      - VPN_PROTOCOL=udp
+      - ENABLE_PRIVOXY=yes
+      - LAN_NETWORK=192.168.1.0/24
+      - STRICT_PORT_FORWARD=yes
+      - NAME_SERVERS=1.1.1.1,8.8.8.8,1.0.0.1,8.8.4.4
+      - DEBUG=false
+      - PUID=${PUID}
+      - PGID=${PGID}
+    cap_add:
+      - net_admin
+    networks:
+      - webproxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.delugeaverymatt.frontend.rule=Host:deluge.${DOMAIN}"
+      - "traefik.delugeaverymatt.port=8112"
+      - "traefik.delugeaverymatt.protocol=http"
+      - "traefik.privoxyaverymatt.frontend.rule=Host:privoxy.${DOMAIN}"
+      - "traefik.privoxyaverymatt.port=8118"
+      - "traefik.privoxyaverymatt.protocol=http"
+      - "traefik.docker.network=webproxy"
+    ports:
+      - 8112:8112
+      - 8118:8118
+      - 58846:58846
+      - 58946:58946
+    logging:
+      options:
+        max-size: ${LOG_MAX_SIZE:-4m}
+        max-file: ${LOG_MAX_FILE:-10}
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker
+    restart: unless-stopped
+    ports:
+      - 32400:32400/tcp
+      - 3005:3005/tcp
+      - 8324:8324/tcp
+      - 32469:32469/tcp
+      - 1900:1900/udp
+      - 32410:32410/udp
+      - 32412:32412/udp
+      - 32413:32413/udp
+      - 32414:32414/udp
+    environment:
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - ALLOWED_NETWORKS=192.168.1.0/255.255.255.0
+      - ADVERTISE_IP=http://${IP_ADDRESS}:32400,https://plex.${DOMAIN}:443
+      - PUID=${PUID}
+      - PGID=${PGID}
+    networks:
+      - webproxy
+    labels:
+      - "traefik.docker.network=webproxy"
+      - "traefik.enable=true"
+      - "traefik.plex.frontend.rule=Host:plex.${DOMAIN}"
+      - "traefik.plex.port=32400"
+      - "traefik.plex.protocol=http"
+    volumes:
+      - ${CONTENT_PATH}/plex:/config
+      - ${CONTENT_PATH}/transcode:/transcode
+      - ${CONTENT_PATH}/Multimedia/shows:/data/shows
+      - ${CONTENT_PATH}/Multimedia/movies:/data/movies
+      - /etc/localtime:/etc/localtime:ro
+    logging:
+      options:
+        max-size: ${LOG_MAX_SIZE:-4m}
+        max-file: ${LOG_MAX_FILE:-10}
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${CONTENT_PATH}/sonarr:/config
+      - ${CONTENT_PATH}/torrents:/data
+      - ${CONTENT_PATH}/Multimedia/shows:/tv
+    networks:
+      - webproxy
+    labels:
+      - "traefik.docker.network=webproxy"
+      - "traefik.enable=true"
+      - "traefik.sonarr.frontend.rule=Host:sonarr.${DOMAIN}"
+      - "traefik.sonarr.port=8989"
+      - "traefik.sonarr.protocol=http"
+    environment:
+      - TZ=${TZ}
+      - PGID=${PGID}
+      - PUID=${PUID}
+    logging:
+      options:
+        max-size: ${LOG_MAX_SIZE:-4m}
+        max-file: ${LOG_MAX_FILE:-10}
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    environment:
+      - TZ=${TZ}
+      - PGID=${PGID}
+      - PUID=${PUID}
+    volumes:
+      - ${CONTENT_PATH}/radarr:/config
+      - ${CONTENT_PATH}/Multimedia/movies:/movies
+      - ${CONTENT_PATH}/torrents:/data
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - webproxy
+    labels:
+      - "traefik.docker.network=webproxy"
+      - "traefik.enable=true"
+      - "traefik.radarr.frontend.rule=Host:radarr.${DOMAIN}"
+      - "traefik.radarr.port=7878"
+      - "traefik.radarr.protocol=http"
+    restart: unless-stopped
+
+  jackett:
+    image: linuxserver/jackett
+    container_name: jackett
+    restart: unless-stopped
+    ports:
+      - 9117:9117
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    networks:
+      - webproxy
+    labels:
+      - "traefik.docker.network=webproxy"
+      - "traefik.enable=true"
+      - "traefik.jackett.frontend.rule=Host:jackett.${DOMAIN}"
+      - "traefik.jackett.port=9117"
+      - "traefik.jackett.protocol=http"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${CONTENT_PATH}/jackett:/config
+      - ${CONTENT_PATH}/torrents:/downloads
+
+networks:
+  webproxy:
+    external: true
+
